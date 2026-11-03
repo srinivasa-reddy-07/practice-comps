@@ -1,0 +1,132 @@
+/* index.css */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Inter:wght@300;400&display=swap');
+
+body, html {
+  margin: 0;
+  padding: 0;
+  background-color: #e8e6e1;
+  color: #1a1a1a;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+.scroll-container {
+  width: 100vw;
+  height: 500vh;
+}
+
+.canvas-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 2.5rem 4rem;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.logo {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.nav-links {
+  display: flex;
+  gap: 3rem;
+}
+
+.nav-links span {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.nav-links .active {
+  font-style: italic;
+  font-weight: 500;
+}
+
+.film-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 2rem;
+}
+
+.label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+  opacity: 0.6;
+}
+
+.value {
+  font-size: 1.1rem;
+}
+
+.title-section {
+  text-align: center;
+  margin-bottom: -1rem;
+}
+
+.title {
+  font-family: 'Cinzel', serif;
+  font-size: 5rem;
+  margin: 0 0 1.5rem 0;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.dot-nav {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  opacity: 0.2;
+  transition: opacity 0.3s ease;
+}
+
+.dot-nav.active {
+  opacity: 1;
+}
+
+.footer-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
+}

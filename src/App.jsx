@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { gsap } from "gsap";
-import ExpandedView from "./ExpandedView"
+import ExpandedView from "./components/ExpandedView"
 
 const COLS = 8;
 const ROWS = 6;
