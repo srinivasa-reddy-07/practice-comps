@@ -7,14 +7,14 @@ import {
   createNotchStarGeometry,
   createLedMaterials,
 } from "./ledM.js";
-
-// The "MB" word is ~5.75 units wide vs 3 for the old lone M, so shrink to fit.
-// Tweak this if the word looks too big/small in frame.
-const WORD_FIT = 0.55;
 import { glowVertex, glowFragment } from "./shaders.js";
 import { LOOK } from "../config.js";
+import { createPowerUniforms, applyPowerOn } from "./ledPowerOn.js";
 
-/** Chrome star (scene 1), LED dot-matrix M with stars (scene 2) and the light they live in. */
+// The "MB" word is ~5.75 units wide vs 3 for the old lone M, so shrink to fit.
+const WORD_FIT = 0.55;
+
+/** Chrome star (scene 1), LED dot-matrix MB with stars (scene 2) and the light they live in. */
 export class HeroObjects {
   // renderer is optional, only used to get max anisotropy for the dot textures
   constructor(envMap, renderer) {
@@ -38,7 +38,7 @@ export class HeroObjects {
     this.starMat = chrome(0.16);
     this.star = new THREE.Mesh(this.starGeo, this.starMat);
 
-    // --- scene 2: LED dot-matrix M with star cut-outs + notch star ---
+    // --- scene 2: LED dot-matrix MB with star cut-outs + notch star ---
     const { materials, textures } = createLedMaterials({
       envMap,
       renderer,
@@ -62,7 +62,14 @@ export class HeroObjects {
     this.m.add(new THREE.Mesh(this.bGeo, this.mMats));
     this.m.add(new THREE.Mesh(this.mStarGeo, this.mMats));
 
-    // --- glow sprite ---
+    // --- LED power-on: lives inside the MB materials, so only the letters can light up ---
+    const box = new THREE.Box3().setFromObject(this.m);
+    const c = box.getCenter(new THREE.Vector3());
+    const half = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    this.powerUniforms = createPowerUniforms(c, half);
+    this.mMats.forEach((m) => applyPowerOn(m, this.powerUniforms));
+
+    // --- glow sprite (only used as the flash when the star collapses) ---
     this.glowUniforms = { uIntensity: { value: 0 }, uScale: { value: 0.3 } };
     this.glowMat = new THREE.ShaderMaterial({
       vertexShader: glowVertex,
@@ -92,14 +99,15 @@ export class HeroObjects {
     this.star.visible = S.starVis > 0.5 && S.starScale > 0.002;
     this.star.position.set(0, 0, S.starZ);
     this.star.scale.setScalar(Math.max(S.starScale, 0.0001));
-    this.star.rotation.set(0.38, S.starRotY, S.starRotZ, "YXZ");
+    this.star.rotation.set(0.38 + S.starRotX, S.starRotY, S.starRotZ, "YXZ");
 
+    // the MB never moves: it sits there (unpowered) the whole time, `reveal` is the power
     this.m.visible = S.mVis > 0.5;
-    this.m.scale.setScalar(Math.max(S.mScale, 0.0001));
-    this.m.rotation.set(0, S.mRotY, 0);
-
-    // optional: LED "scan" shimmer, uncomment if you want it
-    // this.ledTextures.glow.offset.y += 0.0004;
+    this.m.scale.setScalar(1);
+    // starts tipped upwards, levels out to face the screen as it powers on (S.mTilt goes -0.5 -> 0)
+    this.m.position.set(0, 0, 0);
+    this.m.rotation.set(S.mTilt, 0, 0);
+    this.powerUniforms.uReveal.value = S.reveal;
 
     this.glowUniforms.uIntensity.value = S.glow;
     this.glowUniforms.uScale.value = S.glowScale;

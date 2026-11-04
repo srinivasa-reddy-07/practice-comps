@@ -1,38 +1,3 @@
-// // Everything tweakable lives here. Times are in seconds on the master GSAP timeline.
-// export const DEFAULT_ASSETS = {
-//   colorSrc: '/assets/mstar/maddy_color.jpg', // primary reference (reconstruction + hue)
-//   monoSrc: '/assets/mstar/maddy_mono.png',   // silhouette + luminance reference
-// };
-
-// // Seconds for each part of the intro. Edit these; everything else follows.
-// export const TIMING = {
-//   star: 4.0,     // star flies in and collapses into light
-//   letter: 3.0,   // metallic M appears and holds
-//   explode: 2.9,  // M bursts into stars
-//   fade: 1.9,     // explosion fades out, floor stars appear
-//   build: 9.0,    // stars climb and form the portrait
-//   hold: 2.0,     // final camera drift after the portrait is done
-// };
-
-// export const DURATION =
-//   TIMING.star + TIMING.letter + TIMING.explode + TIMING.fade + 0.1 + TIMING.build + TIMING.hold; // 15 s now
-
-// export const LOOK = {
-//   fov: 30,
-//   baseDistance: 9.5,       // camera distance that frames the portrait with ~7% margin at 1.43:1
-//   aspect: 1.43,            // native cinema-screen aspect
-//   starRadius: 1.75,
-//   mScale: 1.2,             // size of the 3D "M"
-//   mDepth: 0.5,
-//   particleCount: 8200,
-//   seed: 1337,
-//   colorMix: 0.3,           // how much of the colour photograph's hue tints the silver stars (0 = pure silver)
-//   bloom: { base: 0.12, radius: 0.4, threshold: 0.95 },
-//   exposure: 1.0,
-// };
-
-
-
 // Everything tweakable lives here. Times are in seconds on the master GSAP timeline.
 export const DEFAULT_ASSETS = {
   colorSrc: '/assets/mstar/maddy_color.jpg', // primary reference (reconstruction + hue)
@@ -41,12 +6,12 @@ export const DEFAULT_ASSETS = {
 
 // Seconds for each part of the intro. Edit these; everything else follows.
 export const TIMING = {
-  star: 4.0,     // star flies in and collapses into light
-  letter: 3.0,   // metallic M appears and holds
+  star:3,     // star flies in and collapses into light
+  letter: 5.0,   // metallic M appears and holds
   explode: 2.9,  // M bursts into stars
   fade: 1.9,     // explosion fades out, floor stars appear
-  build: 7.0,    // stars climb and form the portrait
-  hold: 4.0,     // final hold (was 2.0). The floor dust appears and rises during this phase.
+  build: 8.0,    // stars climb and form the portrait
+  hold: 3.0,     // final hold (was 2.0). The floor dust appears and rises during this phase.
 };
 
 export const DURATION =
@@ -61,7 +26,7 @@ export const LOOK = {
   mDepth: 0.5,
   particleCount: 8200,
   seed: 1337,
-  colorMix: 0.3,           // how much of the colour photograph's hue tints the silver stars (0 = pure silver)
+  colorMix: 0.5,           // how much of the colour photograph's hue tints the silver stars (0 = pure silver)
   bloom: { base: 0.12, radius: 0.4, threshold: 0.95 },
   exposure: 1.0,
 };

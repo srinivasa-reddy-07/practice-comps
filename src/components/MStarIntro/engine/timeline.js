@@ -1,21 +1,23 @@
 import { gsap } from "gsap";
 import { DURATION, LOOK, TIMING, DUST } from "../config.js";
 
-/** Single source of truth for every animated value. The engine reads it each frame; GSAP is the only writer. */
 export function createState() {
   return {
     // hero star + letter
     starZ: 12,
     starScale: 1,
     starRotY: 0,
+    starRotX: 0,
     starRotZ: 0,
     starVis: 1,
     glow: 0,
     glowScale: 0.3,
     keyX: -3.5,
-    mScale: 0.04,
-    mRotY: 1.1,
-    mVis: 0,
+    mScale: 1, // the MB no longer scales in
+    mRotY: 0, // ...or turns in
+    mTilt: -0.5, // MB starts tipped up (radians, negative = face tipped up), levels out to 0 as it powers on
+    mVis: 1, // it is there from the first frame (unpowered)
+    reveal: 0, // LED power-on 0 -> 1, spreads from the centre of the word
     // particles
     appear: 0,
     burst: 0,
@@ -63,79 +65,47 @@ export function buildTimeline(S, { onComplete } = {}) {
   const holdAt = buildAt + T.build;
 
   // ---------- SCENE 1 — star arrival ----------
-  // star holds a fixed angle while it rushes in, then starts a gentle spin
-  const STAR_ANGLE_Y = 0.6; // fixed yaw while flying in (radians)
-  const STAR_ANGLE_Z = -0.25; // fixed roll
-  const spinAt = 1 * s; // spin begins here (about 1 s in)
-  const spinDur = 1.0 * s; // and runs until the star collapses into light
+  // The star only spins around X and Y. Z roll is locked at 0.
+  tl.set(S, { starRotX: 0, starRotY: 0, starRotZ: 0, starScale: 0.2 }, 0);
 
-  tl.set(
-    S,
-    { starRotY: STAR_ANGLE_Y, starRotZ: STAR_ANGLE_Z, starScale: 1.35 },
-    0,
-  );
+  // one continuous move from far away to the centre
+  ft(S, { starZ: 10 }, { starZ: 0.2 }, 2 * s, 0, "power2.in");
 
-  // fly in from out of the screen, a bit bigger at the start, landing at normal size
-  ft(S, { starZ: 12 }, { starZ: 2.6 }, 1.5 * s, 0, "power2.in");
-  ft(S, { starScale: 1 }, { starScale: 1 }, 1.5 * s, 0, "power2.out");
+  // spin around X 
+  ft(S, { starRotX: 0 }, { starRotX: Math.PI * 0.75 }, 2 * s, 0, "power1.out");
 
-  // gentle spin: about 3/4 of a turn
+  // scale stays constant, then shrinks into a point at the very end
   ft(
     S,
-    { starRotY: STAR_ANGLE_Y },
-    { starRotY: STAR_ANGLE_Y + Math.PI * 1.5 },
-    spinDur,
-    spinAt,
-    "power1.in",
-  );
-  ft(
-    S,
-    { starRotZ: STAR_ANGLE_Z },
-    { starRotZ: STAR_ANGLE_Z - 0.35 },
-    spinDur,
-    spinAt,
-    "power1.inOut",
-  );
-
-  ft(
-    S,
-    { starZ: 2.6, starScale: 1 },
-    { starZ: 0.2, starScale: 0.015 },
+    { starScale: 0.2 },
+    { starScale: 0.015 },
     0.5 * s,
     1.5 * s,
     "power3.in",
-  ); // contract into light
-  ft(
-    S,
-    { glow: 0, glowScale: 0.28 },
-    { glow: 1.25, glowScale: 0.42 },
-    0.85 * s,
-    1.15 * s,
-    "power2.in",
   );
+
+  // bloom build only, no glow ramp, so the LED word stays dark until the star is gone
   ft(
     S,
     { bloom: LOOK.bloom.base },
-    { bloom: 0.55 },
-    0.85 * s,
-    1.15 * s,
+    { bloom: 0.45 },
+    0.5 * s,
+    1.5 * s,
     "power2.in",
   );
   tl.set(S, { starVis: 0 }, letterAt);
 
-  // ---------- SCENE 2 — metallic M ----------
-  tl.set(S, { mVis: 1 }, letterAt);
-  ft(S, { mScale: 0.04 }, { mScale: 1 }, 1.0 * l, letterAt, "expo.out");
-  ft(S, { mRotY: 1.1 }, { mRotY: 0 }, 1.25 * l, letterAt, "power3.out");
+  // ---------- SCENE 2 — the star feeds power into the MB ----------
   ft(
     S,
-    { glow: 1.25, glowScale: 0.42 },
-    { glow: 0.07, glowScale: 0.8 },
-    1.2 * l,
+    { glow: 1.0, glowScale: 0.34 },
+    { glow: 0.07, glowScale: 0.5 },
+    0.9 * l,
     letterAt,
     "power2.out",
   );
-  ft(S, { bloom: 0.55 }, { bloom: 0.28 }, 1.0 * l, letterAt, "power2.out");
+  ft(S, { bloom: 0.45 }, { bloom: 0.28 }, 1.2 * l, letterAt, "power2.out");
+  ft(S, { reveal: 0 }, { reveal: 1 }, 4, letterAt - 1, "power2.inOut");
   ft(
     S,
     { keyX: -3.5 },
@@ -152,6 +122,10 @@ export function buildTimeline(S, { onComplete } = {}) {
     letterAt,
     "sine.inOut",
   );
+
+  // The MB starts tipped upwards. As the light spreads across it, it slowly rotates back to face the
+  // screen head-on, on the same timing and easing as the power-on so the two feel like one motion.
+  ft(S, { mTilt: -0.5 }, { mTilt: 0 }, 2.1, letterAt, "power2.inOut");
 
   // ---------- SCENE 3 — explosion ----------
   tl.set(S, { appear: 1 }, explodeAt - 0.02);
@@ -184,7 +158,7 @@ export function buildTimeline(S, { onComplete } = {}) {
   );
 
   // ---------- SCENE 5 — stars climb and form the portrait ----------
-  ft(S, { assemble: 0 }, { assemble: 1 }, T.build, buildAt);
+  ft(S, { assemble: 0 }, { assemble: 1 }, T.build, buildAt - 0.8);
   ft(
     S,
     { upright: 0 },
@@ -193,7 +167,7 @@ export function buildTimeline(S, { onComplete } = {}) {
     buildAt + T.build * 0.125,
     "power2.inOut",
   );
-  ft(S, { tilt: 0.95 }, { tilt: 0.16 }, T.build, buildAt, "power2.inOut");
+  ft(S, { tilt: 0.95 }, { tilt: 0.16 }, T.build, buildAt);
   ft(
     S,
     { lumMix: 0 },
@@ -229,8 +203,7 @@ export function buildTimeline(S, { onComplete } = {}) {
     "sine.inOut",
   );
 
-  // The moment the hold starts: ~140 small stars appear scattered over the whole floor, then drift up gradually.
-  // No burst, no spin, no bloom flash.
+  // The moment the hold starts: small stars appear scattered over the whole floor, then drift up gradually.
   ft(S, { dustAlpha: 0 }, { dustAlpha: 1 }, DUST.fadeIn, holdAt, "power1.out");
   ft(S, { dustRise: 0 }, { dustRise: 1 }, T.hold, holdAt, "sine.inOut");
 
