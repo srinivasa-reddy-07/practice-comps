@@ -95,7 +95,7 @@ export class HeroObjects {
     this.group.add(this.star, this.m, this.glow, this.key, this.rim, this.fill);
   }
 
-  update(S) {
+  update(S, camDist = 10) {
     this.star.visible = S.starVis > 0.5 && S.starScale > 0.002;
     this.star.position.set(0, 0, S.starZ);
     this.star.scale.setScalar(Math.max(S.starScale, 0.0001));
@@ -105,7 +105,8 @@ export class HeroObjects {
     this.m.visible = S.mVis > 0.5;
     this.m.scale.setScalar(1);
     // starts tipped upwards, levels out to face the screen as it powers on (S.mTilt goes -0.5 -> 0)
-    this.m.position.set(0, 0, 0);
+    // this.m.position.set(0, 0, 0);
+    this.m.position.set(0, 0, (S.mFly ?? 0) * (camDist - 2));
     this.m.rotation.set(S.mTilt, 0, 0);
     this.powerUniforms.uReveal.value = S.reveal;
 

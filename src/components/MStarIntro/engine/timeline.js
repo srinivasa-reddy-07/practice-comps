@@ -1,10 +1,10 @@
 import { gsap } from "gsap";
-import { DURATION, LOOK, TIMING, DUST } from "../config.js";
+import { LOOK, TIMING, DUST } from "../config.js";
 
 export function createState() {
   return {
     // hero star + letter
-    starZ: 12,
+    starZ: 10,
     starScale: 1,
     starRotY: 0,
     starRotX: 0,
@@ -13,12 +13,15 @@ export function createState() {
     glow: 0,
     glowScale: 0.3,
     keyX: -3.5,
-    mScale: 1, // the MB no longer scales in
-    mRotY: 0, // ...or turns in
-    mTilt: -0.5, // MB starts tipped up (radians, negative = face tipped up), levels out to 0 as it powers on
-    mVis: 1, // it is there from the first frame (unpowered)
-    reveal: 0, // LED power-on 0 -> 1, spreads from the centre of the word
-    // particles
+    mScale: 1,
+    mRotY: 0,
+    mTilt: -0.5,
+    mVis: 1,
+    reveal: 0,
+    mFly: 0,
+    starFlood: 0,
+    starSpin: 0,
+    // particles (portrait)
     appear: 0,
     burst: 0,
     drift: 0,
@@ -34,9 +37,9 @@ export function createState() {
     colorMix: 0,
     lumMix: 0,
     sizeMul: 1,
-    // floor dust (hold phase)
+    // floor stars
     dustAlpha: 0,
-    dustRise: 0,
+    dustRise: 0, // 0 -> 1 linear over the whole dust phase; it STAYS at 1 afterwards so the stars stay put
     // camera + post
     dolly: 0.35,
     orbit: 0.05,
@@ -54,27 +57,31 @@ export function buildTimeline(S, { onComplete } = {}) {
     tl.fromTo(target, from, { ...to, duration: dur, ease }, at);
 
   const T = TIMING;
-  const s = T.star / 2; // stretch factors relative to the original 2 s scenes
+  const s = T.star / 2;
   const l = T.letter / 2;
   const e = T.explode / 2;
 
   const letterAt = T.star;
   const explodeAt = letterAt + T.letter;
   const fadeAt = explodeAt + T.explode;
-  const buildAt = fadeAt + T.fade + 0.1;
-  const holdAt = buildAt + T.build;
+  const buildAt = fadeAt + T.fade + 0.1 + 1;
+
+  const ASSEMBLE_LEAD = 4;
+  const formedAt = buildAt - ASSEMBLE_LEAD + T.build;
+
+  const flyTime = T.flyTime ?? 0.2;
+  const flyEnd = explodeAt + flyTime;
+  const assembleAt = buildAt - 0.8;
+  const floodOverlap = T.floodOverlap ?? 1.25;
+  const floodAt = flyEnd - 0.05;
+  const floodEnd = assembleAt + floodOverlap + 0.25;
+  const floodDur = floodEnd - floodAt + 1;
 
   // ---------- SCENE 1 — star arrival ----------
-  // The star only spins around X and Y. Z roll is locked at 0.
   tl.set(S, { starRotX: 0, starRotY: 0, starRotZ: 0, starScale: 0.2 }, 0);
 
-  // one continuous move from far away to the centre
   ft(S, { starZ: 10 }, { starZ: 0.2 }, 2 * s, 0, "power2.in");
-
-  // spin around X 
   ft(S, { starRotX: 0 }, { starRotX: Math.PI * 0.75 }, 2 * s, 0, "power1.out");
-
-  // scale stays constant, then shrinks into a point at the very end
   ft(
     S,
     { starScale: 0.2 },
@@ -83,8 +90,6 @@ export function buildTimeline(S, { onComplete } = {}) {
     1.5 * s,
     "power3.in",
   );
-
-  // bloom build only, no glow ramp, so the LED word stays dark until the star is gone
   ft(
     S,
     { bloom: LOOK.bloom.base },
@@ -105,7 +110,7 @@ export function buildTimeline(S, { onComplete } = {}) {
     "power2.out",
   );
   ft(S, { bloom: 0.45 }, { bloom: 0.28 }, 1.2 * l, letterAt, "power2.out");
-  ft(S, { reveal: 0 }, { reveal: 1 }, 4, letterAt - 1, "power2.inOut");
+  ft(S, { reveal: 0 }, { reveal: 1 }, 4, letterAt - 1.25, "power2.inOut");
   ft(
     S,
     { keyX: -3.5 },
@@ -113,7 +118,7 @@ export function buildTimeline(S, { onComplete } = {}) {
     1.8 * l,
     letterAt + 0.15 * l,
     "sine.inOut",
-  ); // light sweeps across the chrome
+  );
   ft(
     S,
     { dolly: 0.35, orbit: 0.05 },
@@ -122,92 +127,109 @@ export function buildTimeline(S, { onComplete } = {}) {
     letterAt,
     "sine.inOut",
   );
-
-  // The MB starts tipped upwards. As the light spreads across it, it slowly rotates back to face the
-  // screen head-on, on the same timing and easing as the power-on so the two feel like one motion.
   ft(S, { mTilt: -0.5 }, { mTilt: 0 }, 2.1, letterAt, "power2.inOut");
 
-  // ---------- SCENE 3 — explosion ----------
-  tl.set(S, { appear: 1 }, explodeAt - 0.02);
-  tl.set(S, { mVis: 0 }, explodeAt);
-  ft(S, { glow: 0.07 }, { glow: 0 }, 1.0, explodeAt, "power2.out");
-  ft(S, { bloom: 0.28 }, { bloom: 0.5 }, 0.12, explodeAt, "power2.out");
+  // ---------- SCENE 3 — the MB comes AT the camera and out through the screen ----------
+  ft(S, { mFly: 0 }, { mFly: 1 }, flyTime, explodeAt, "power1.in");
+  tl.set(S, { mVis: 0 }, flyEnd);
+  ft(S, { glow: 0.07 }, { glow: 0.5 }, flyTime, explodeAt, "power2.in");
+  ft(S, { glow: 0.5 }, { glow: 0 }, 0.9, flyEnd, "power2.out");
+  ft(S, { bloom: 0.28 }, { bloom: 0.85 }, flyTime, explodeAt, "power2.in");
+  ft(S, { bloom: 0.85 }, { bloom: LOOK.bloom.base }, 1.4, flyEnd, "power2.out");
+  ft(S, { starSpin: 0 }, { starSpin: 1 }, floodDur, floodAt);
+
+  ft(S, { burst: 0 }, { burst: 1 }, T.explode, explodeAt);
+  // ft(S, { drift: 0 }, { drift: 1 }, 5.0, explodeAt);
+  // ft(S, { spinT: 0 }, { spinT: 16 }, 7.0, explodeAt, "power2.out");
+
+  ft(S, { drift: 0 }, { drift: 1 }, 5.5, explodeAt); // was 5.0
+  ft(S, { spinT: 0 }, { spinT: 16 }, 8.0, explodeAt, "power2.out"); // was 7.0
+  ft(S, { tilt: 1.5 }, { tilt: 0.95 }, 2.0 * e, explodeAt, "sine.out");
   ft(
     S,
-    { bloom: 0.5 },
-    { bloom: LOOK.bloom.base },
-    1.6,
-    explodeAt + 0.12,
-    "power2.out",
+    { dolly: -0.45 },
+    { dolly: 0.7 },
+    2.5 * e - flyTime,
+    flyEnd,
+    "power3.out",
   );
-  ft(S, { burst: 0 }, { burst: 1 }, T.explode, explodeAt);
-  ft(S, { drift: 0 }, { drift: 1 }, 5.0, explodeAt);
-  ft(S, { spinT: 0 }, { spinT: 16 }, 7.0, explodeAt, "power2.out");
-  ft(S, { tilt: 1.5 }, { tilt: 0.95 }, 2.0 * e, explodeAt, "sine.out");
-  ft(S, { dolly: -0.45 }, { dolly: 0.7 }, 2.5 * e, explodeAt, "power3.out");
 
-  // ---------- SCENE 4 — explosion fades, floor stars appear ----------
-  ft(S, { regroup: 0 }, { regroup: 1 }, T.fade, fadeAt);
+  // ---------- SCENE 4 — the big stars flood up and off the top of the screen ----------
+  ft(S, { starFlood: 0 }, { starFlood: 1 }, floodDur, floodAt);
+  const regroupDur = Math.max(0.3, T.fade - 0.9);
+  ft(S, { regroup: 0 }, { regroup: 1 }, regroupDur, buildAt - 0.9 - regroupDur);
+
+  const camStart = explodeAt + 2.5 * e;
   ft(
     S,
     { dolly: 0.7, orbit: 0 },
-    { dolly: 0.28, orbit: 0.07 },
-    2.5,
-    explodeAt + 2.5 * e,
+    { dolly: 0, orbit: 0 },
+    buildAt - camStart,
+    camStart,
     "sine.inOut",
   );
 
   // ---------- SCENE 5 — stars climb and form the portrait ----------
-  ft(S, { assemble: 0 }, { assemble: 1 }, T.build, buildAt - 0.8);
+  const SYNC = 5;
+
+  ft(
+    S,
+    { appear: 0 },
+    { appear: 1 },
+    0.7,
+    buildAt - ASSEMBLE_LEAD,
+    "power1.out",
+  );
+  ft(S, { assemble: 0 }, { assemble: 1 }, T.build, buildAt - ASSEMBLE_LEAD);
+
   ft(
     S,
     { upright: 0 },
     { upright: 1 },
     T.build * 0.875,
-    buildAt + T.build * 0.125,
+    buildAt - SYNC + T.build * 0.125,
     "power2.inOut",
   );
-  ft(S, { tilt: 0.95 }, { tilt: 0.16 }, T.build, buildAt);
   ft(
     S,
     { lumMix: 0 },
     { lumMix: 1 },
     T.build * 0.875,
-    buildAt + T.build * 0.1,
+    buildAt - SYNC + T.build * 0.1,
     "sine.inOut",
   );
   ft(
     S,
     { colorMix: 0 },
     { colorMix: LOOK.colorMix },
-    T.build * 0.85,
-    buildAt + T.build * 0.25,
+    T.build * 0.75,
+    buildAt - SYNC + T.build * 0.25,
     "sine.inOut",
   );
+
+  const tiltStart = explodeAt + 2.0 * e;
   ft(
     S,
-    { dolly: 0.28, orbit: 0.07 },
-    { dolly: 0, orbit: -0.05 },
-    T.build,
-    buildAt,
+    { tilt: 0.95 },
+    { tilt: 0.16 },
+    buildAt - tiltStart,
+    tiltStart,
     "sine.inOut",
   );
 
-  // ---------- SCENE 6 — final hold + floor dust ----------
-  ft(
-    S,
-    { dolly: 0, orbit: -0.05 },
-    { dolly: -0.12, orbit: 0 },
-    T.hold,
-    holdAt,
-    "sine.inOut",
+  // ---------- SCENE 6 — floor stars (matched to final_effect.mp4) ----------
+  const dustStart = DUST.startAfterFormed ?? -3.4;
+  const dustWindow = DUST.spawnTime + DUST.riseTimeMax; // same formula as FloorStars
+  const dustAt = Math.max(0, formedAt + dustStart);
+  const endAt = Math.max(
+    formedAt + T.hold,
+    dustAt + dustWindow + (T.tail ?? 0.5),
   );
 
-  // The moment the hold starts: small stars appear scattered over the whole floor, then drift up gradually.
-  ft(S, { dustAlpha: 0 }, { dustAlpha: 1 }, DUST.fadeIn, holdAt, "power1.out");
-  ft(S, { dustRise: 0 }, { dustRise: 1 }, T.hold, holdAt, "sine.inOut");
+  tl.set(S, { dustAlpha: 1 }, dustAt); // kept for any other code that reads it
+  ft(S, { dustRise: 0 }, { dustRise: 1 }, dustWindow, dustAt, "none");
 
-  tl.to({}, { duration: 0 }, DURATION);
+  tl.to({}, { duration: 0 }, endAt);
 
   return tl;
 }
